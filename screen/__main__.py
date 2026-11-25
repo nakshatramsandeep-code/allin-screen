@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-from . import cost, guard, memory, pipeline, read, workflow
+from . import corrections, cost, guard, history, memory, outreach, pipeline, read, workflow
 from .util import AllInError, REC, load_cfg
 
 
@@ -24,6 +24,9 @@ def main():
     d = sub.add_parser("drafts", help="email draft and simulated call slot")
     d.add_argument("company")
     sub.add_parser("evals", help="run the golden set")
+    sub.add_parser("unittests", help="run the critical unit tests and store the result")
+    sub.add_parser("history", help="historical test: score the 12 memos and compare with the fund's decisions")
+    sub.add_parser("retry", help="redo applicants whose retry was requested on the web, and failed ones")
     a = ap.parse_args()
     cfg = load_cfg()
     try:
@@ -43,6 +46,14 @@ def main():
             print(cost.refresh(cfg))
         elif a.cmd == "drafts":
             print(workflow.drafts(cfg, a.company))
+        elif a.cmd == "history":
+            d = history.run(cfg)
+            print(f"agree {d['agree']}, disagree {d['disagree']}, partner review {d['abstain']}")
+        elif a.cmd == "unittests":
+            from evals import run_evals
+            sys.exit(run_evals.run_unit(cfg))
+        elif a.cmd == "retry":
+            pipeline.retry(cfg)
         elif a.cmd == "evals":
             from evals import run_evals
             sys.exit(run_evals.main(cfg))

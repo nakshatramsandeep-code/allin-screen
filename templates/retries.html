@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Retries - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><p class="small">RETRIES</p><h1>Retries and <em>hand-offs</em>.</h1>
+<p>A failed fetch, screen or booking is retried up to the cap ({{ cap }} attempts). After that it stops, is handed to a person, and the reason is logged here. Nothing is retried forever and nothing fails silently.</p></section>
+{% set open_ = rows|selectattr('status','in',['open','retry_requested'])|list %}
+<div class="grid">
+  <div class="card"><p class="small">WAITING FOR A PERSON</p><div class="stat">{{ open_|length }}</div><p class="small">open hand-offs</p></div>
+  <div class="card"><p class="small">RETRY CAP</p><div class="stat">{{ cap }}</div><p class="small">attempts per failed fetch (config.yaml)</p></div>
+  <div class="card"><p class="small">RESOLVED</p><div class="stat">{{ rows|selectattr('status','equalto','resolved')|list|length }}</div><p class="small">hand-offs closed</p></div>
+</div>
+
+<h2>Queue</h2>
+<div class="scroll"><table><tr><th>What</th><th>Applicant</th><th>Why it stopped</th><th>Attempts</th><th>Status</th><th>Action</th></tr>
+{% for h in rows %}<tr><td>{{ h.kind }}</td><td>{{ h.name }}</td><td>{{ h.reason }}<br><span class="small">{{ h.ts }}</span></td><td>{{ h.attempts or '-' }}</td><td>{{ h.status }}</td>
+<td class="inline">{% if h.status in ('open','retry_requested') %}
+  {% if h.kind in ('fetch','scorer') and h.status == 'open' %}<form method="post" action="{{ url_for('retry_action', hid=h.id, what='retry') }}"><button class="ghost">Retry</button></form>{% endif %}
+  {% if h.kind in ('reply','calendar','booking') %}<a href="{{ url_for('emails') }}">Open email</a>{% endif %}
+  <form method="post" action="{{ url_for('retry_action', hid=h.id, what='resolve') }}"><button class="ghost">Mark resolved</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6" class="small">Nothing has failed.</td></tr>{% endfor %}</table></div>
+<p class="small">Retry asks the command line to redo that applicant with the cache bypassed: <code>python -m screen retry</code>.</p>
+
+<h2>Fetch policy</h2>
+<div class="grid">
+<div class="card"><b>Retry cap</b><p>{{ cap }} attempts with a short back-off. Then hand to a person and log the reason. Change it in config.yaml.</p></div>
+<div class="card"><b>robots.txt and terms</b><p>A disallowed path, or a robots.txt that cannot be read, is skipped and logged. No scraping behind a login. These hosts are never fetched: {{ never|join(', ') }}. Access blocks are not bypassed.</p></div>
+<div class="card"><b>Cache</b><p>Each source is cached per company so it is fetched once. A retry bypasses the cache.</p></div>
+<div class="card"><b>Wrong company</b><p>Pages found by name are checked against the applicant. A page about a different company with the same name is dropped and flagged.</p></div>
+</div>
+{% endblock %}

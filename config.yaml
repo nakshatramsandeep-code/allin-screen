@@ -26,6 +26,7 @@ scrape:
   backoff_s: 1.5
   max_items: 3          # items kept per source
   max_chars: 1500       # chars kept per item
+  never_fetch: [linkedin.com, facebook.com, instagram.com, twitter.com, x.com]   # login walls; use an official API
 
 fund:
   site: https://www.allincapital.vc
@@ -63,3 +64,5 @@ workflow:
   deeptech_extra: Aditya
 
 fx_max_age_days: 30
+
+budget_inr: 150     # model spend limit in INR. Calls stop when it is reached.

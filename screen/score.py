@@ -81,7 +81,7 @@ def _validate(res, rub, sources):
     res.setdefault("note", "")
 
 
-def score(cfg, rub, name, sources, flags, overrides, run_id):
+def score(cfg, rub, name, sources, flags, overrides, run_id, adjust=None):
     """sources: {id: text}. flags: list of text lines. overrides: text of past corrections."""
     parts = ["RUBRIC (trusted):\n" + _rubric_text(rub)]
     if overrides:
@@ -105,6 +105,10 @@ def score(cfg, rub, name, sources, flags, overrides, run_id):
     for side in ("company", "founder"):
         for g, c in zip(res[side], rub[side]):
             g["weight"] = c["weight"]
+            g["base_score"] = g["score"]
+            if adjust and g["id"] in adjust and g["score"] is not None:       # partner corrections, capped
+                g["adjustment"] = adjust[g["id"]]
+                g["score"] = max(0, min(10, g["score"] + adjust[g["id"]]["delta"]))
             g["points"] = c["weight"] * g["score"] / 10 if g["score"] is not None else 0.0
         total = sum(c["weight"] for c in rub[side])
         res[side + "_pct"] = round(100 * sum(g["points"] for g in res[side]) / total, 1)

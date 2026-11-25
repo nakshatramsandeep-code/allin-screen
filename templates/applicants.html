@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Applicants - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><p class="small">APPLICANTS</p><h1>All applicants and <em>the call</em>.</h1>
+<p>Take the call: {{ n['advance'] }}. Partner review: {{ n['flag'] }}. Recommended no: {{ n['low priority'] }}. These are recommendations. Nothing is auto-rejected or auto-advanced, and you see every outcome.</p></section>
+<div class="scroll"><table>
+<tr><th>Company</th><th>Call</th><th>Score</th><th>Stage</th><th>Sector (as selected)</th><th>Raising</th><th>Flags</th></tr>
+{% for x in rows %}{% set r = x.r %}
+<tr class="row">
+ <td><a href="{{ url_for('applicant', name=r['name']) }}"><b>{{ r['name'] }}</b></a><br><span class="small">{{ r['profile'].get('one_line') or '' }}</span></td>
+ <td><span class="pill {{ 'low' if x.call=='low priority' else x.call }}">{{ x.call }}</span>{% if x.call != x.tool_call %}<br><span class="small">tool said {{ x.tool_call }}</span>{% endif %}</td>
+ <td>{{ x.score }} / 10<br><span class="small">company {{ r['company_pct'] }}% &middot; founder {{ r['founder_pct'] }}%</span></td>
+ <td>{{ stage_by_id[x.stage].label }}</td>
+ <td>{{ r['profile'].get('sector') or '' }}<br><span class="small">{{ r['profile'].get('stage') or '' }}</span></td>
+ <td>{{ r['profile'].get('raising') or '' }}</td>
+ <td>{% for t in x.flags %}<span class="chip">{{ t }}</span>{% else %}<span class="small">none</span>{% endfor %}</td>
+</tr>{% endfor %}
+</table></div>
+{% endblock %}

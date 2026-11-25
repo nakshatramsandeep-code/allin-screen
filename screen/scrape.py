@@ -5,13 +5,14 @@ import html
 import json
 import re
 import time
+import urllib.robotparser
 from urllib.parse import quote, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
 
-from . import guard
-from .util import cache_get, cache_put, now, slug
+from . import guard, llm
+from .util import cache_get, cache_put, db, now, slug
 
 UA = {"User-Agent": "Mozilla/5.0 (research client; respects blocks)"}
 FETCHES = {"count": 0}          # counted so tests can prove the cache works
@@ -27,9 +28,38 @@ def is_placeholder(url):
     return last in ("example", "test", "invalid", "localhost") or "example" in u.lower()
 
 
-def fetch(cfg, url, headers=None):
-    """Return (status, text). status: ok, blocked, not_found, failed."""
+def allowed(cfg, url):
+    """Fetch policy: never a login-walled host; honour robots.txt; if robots.txt cannot be read, skip."""
+    host = urlparse(url).netloc.lower().removeprefix("www.")
+    if any(host == h or host.endswith("." + h) for h in cfg["scrape"]["never_fetch"]):
+        return False, f"skipped: {host} is behind a login and its terms forbid scraping"
+    key = f"_robots/{host}"
+    txt = cache_get(cfg, key)
+    if txt is None:
+        try:
+            r = httpx.get(f"{urlparse(url).scheme}://{urlparse(url).netloc}/robots.txt", timeout=cfg["scrape"]["timeout_s"],
+                          headers=UA, follow_redirects=True)
+            txt = {"ok": r.status_code == 200, "text": r.text if r.status_code == 200 else "", "code": r.status_code}
+        except httpx.HTTPError as e:
+            txt = {"ok": False, "text": "", "code": type(e).__name__}
+        cache_put(cfg, key, txt)
+    if not txt["ok"] and txt["code"] != 404:
+        return False, f"skipped: robots.txt for {host} could not be read ({txt['code']})"
+    if txt["ok"]:
+        rp = urllib.robotparser.RobotFileParser()
+        rp.parse(txt["text"].splitlines())
+        if not rp.can_fetch(UA["User-Agent"], url):
+            return False, f"skipped: robots.txt on {host} disallows this path"
+    return True, ""
+
+
+def fetch(cfg, url, headers=None, api=False):
+    """Return (status, text). status: ok, blocked, not_found, failed, skipped. api=True for an official public API."""
     s = cfg["scrape"]
+    if not api:
+        ok, why = allowed(cfg, url)
+        if not ok:
+            return "skipped", why
     err = ""
     for i in range(s["retries"]):
         guard.check(cfg)
@@ -79,7 +109,7 @@ def _linkedin(cfg, prof):
                 items.append({"url": full, "title": f["name"], "text": _clean(title, cfg["scrape"]["max_chars"])})
             else:
                 notes.append(f"{f['name']}: {st} ({body})")
-    status = "ok" if items else ("placeholder" if any("placeholder" in n for n in notes) else "no_data")
+    status = "ok" if items else ("placeholder" if any("placeholder" in n for n in notes) else ("skipped" if any("skipped" in n for n in notes) else "no_data"))
     return _record("linkedin", status, items, "; ".join(notes))
 
 
@@ -135,7 +165,7 @@ def _youtube(cfg, names):
 def _podcast(cfg, names):
     items, bad = [], []
     for n in names:
-        st, body = fetch(cfg, f"https://itunes.apple.com/search?media=podcast&entity=podcastEpisode&limit=5&term={quote(n)}")
+        st, body = fetch(cfg, f"https://itunes.apple.com/search?media=podcast&entity=podcastEpisode&limit=5&term={quote(n)}", api=True)
         if st != "ok":
             bad.append(f"{n}: {st} {body}")
             continue
@@ -157,11 +187,45 @@ def _finish(source, items, bad, cfg):
     if items:
         return _record(source, "ok", items, "; ".join(bad))
     if bad:
-        return _record(source, "failed", [], "; ".join(bad))
+        status = "skipped" if all("skipped" in b for b in bad) else "failed"
+        return _record(source, status, [], "; ".join(bad))
     return _record(source, "no_relevant_results", [], "Searched. Nothing mentioning the company or founders. This is missing data, not a negative.")
 
 
-def gather(cfg, name, prof, refresh=False):
+VERIFY_SYS = guard.DATA_LIMITS + """
+Task: the applicant is described first. Each numbered page below was found by searching the company name.
+Say which pages are about THE SAME company (same business, founders, city or domain). A page about a different
+company that shares the name must be rejected. Return JSON only: {"same": [int, ...]} with the numbers of matching pages."""
+
+
+def _verify(cfg, name, prof, rec, run_id):
+    """Drop pages about a different company with the same name. Flag it."""
+    if not rec["items"]:
+        return rec
+    pages = "\n".join(f"{i}: {it['title']} | {it['text'][:400]}" for i, it in enumerate(rec["items"]))
+    who = f"{prof['company']}: {prof.get('one_line')}. Founders: " + ", ".join(f["name"] for f in prof["founders"])
+    res = llm.parse_json(llm.call(cfg, "cheap", VERIFY_SYS, guard.data("applicant", who) + "\n" + guard.data("pages", pages),
+                                  run_id, name, "verify_pages"))
+    keep = [i for i in res.get("same", []) if isinstance(i, int) and 0 <= i < len(rec["items"])]
+    dropped = len(rec["items"]) - len(keep)
+    rec["items"] = [rec["items"][i] for i in keep]
+    if dropped:
+        rec["detail"] = (rec["detail"] + "; " if rec["detail"] else "") + f"WRONG COMPANY: dropped {dropped} page(s) about a different company with the same name"
+        if not rec["items"]:
+            rec["status"] = "no_relevant_results"
+    return rec
+
+
+def add_handoff(cfg, kind, name, reason, attempts, run_id=None):
+    with db(cfg) as con:
+        if con.execute("select 1 from handoffs where kind=%s and name=%s and status='open' and reason=%s",
+                       (kind, name, reason)).fetchone():
+            return
+        con.execute("insert into handoffs(ts,kind,name,reason,attempts,status,run_id) values(%s,%s,%s,%s,%s,'open',%s)",
+                    (now(), kind, name, reason, attempts, run_id))
+
+
+def gather(cfg, name, prof, refresh=False, run_id="manual"):
     """Return a list of source records. Cached per company and source; never fetched twice."""
     names = [prof["company"]] + [f["name"] for f in prof["founders"]]
     jobs = {"linkedin": lambda: _linkedin(cfg, prof),
@@ -176,7 +240,9 @@ def gather(cfg, name, prof, refresh=False):
             out.append(hit)
             continue
         guard.check(cfg)
-        rec = job()
+        rec = _verify(cfg, name, prof, job(), run_id)
+        if rec["status"] == "failed":
+            add_handoff(cfg, "fetch", name, f"{src}: {rec['detail']}", cfg["scrape"]["retries"], run_id)
         cache_put(cfg, key, rec)
         out.append(rec)
     return out

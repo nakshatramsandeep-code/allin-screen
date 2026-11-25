@@ -5,7 +5,7 @@ import re
 from .util import REC
 
 
-def decide(rub, res, prof, overlaps, port):
+def decide(rub, res, prof, overlaps, port, extra=()):
     """res: score result. overlaps: list from portfolio.overlap. Returns {rec, reasons, next_action}."""
     g = rub["gate"]
     c, f, cov = res["company_pct"], res["founder_pct"], res["coverage"]
@@ -24,6 +24,7 @@ def decide(rub, res, prof, overlaps, port):
         flag.append(f"Stage '{prof['stage']}' is later than pre-seed or seed (open point 6).")
     if re.search(r"\b(credit|lend\w*|loans?|nbfc|wage access|bnpl|buy-now)\b", f"{sector} {prof.get('one_line') or ''}".lower()):
         flag.append("Lending business. Fit depends on the founders owning credit risk and a credit-risk hire plan (open point 2).")
+    flag.extend(extra)
     if cov < g["min_coverage"]:
         flag.append(f"Only {round(cov * 100)}% of the rubric has data. Too thin to call.")
     if res["injection_attempts"]:

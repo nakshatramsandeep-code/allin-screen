@@ -44,7 +44,7 @@ def load_sources(cfg, name):
 
 PROFILE_SYS = guard.DATA_LIMITS + """
 Task: read the application form and return JSON only:
-{"company": str, "website": str|null, "one_line": str, "sector": str, "stage": str,
+{"company": str, "website": str|null, "one_line": str, "sector": str, "stage": str, "raising": str|null,
  "founders": [{"name": str, "role": str, "linkedin": str|null}]}
 Copy values exactly as written. Use null when a field is not in the text."""
 

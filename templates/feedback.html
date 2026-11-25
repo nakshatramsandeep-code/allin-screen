@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Feedback - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><p class="small">FEEDBACK</p><h1>Partner <em>corrections</em>.</h1>
+<p>When you change a score, the tool keeps four things together: its score, yours, the company and criterion, and your reason. On later runs it retrieves a few relevant ones for similar companies and uses them only if they really apply.</p></section>
+<div class="grid">
+  <div class="card"><p class="small">CORRECTIONS STORED</p><div class="stat">{{ rows|length }}</div><p class="small">across all applicants</p></div>
+  <div class="card"><p class="small">APPLIED IN LAST RUN</p><div class="stat">{{ applied }}</div><p class="small">adjusted a score</p></div>
+  <div class="card"><p class="small">MAX RETRIEVED PER CRITERION</p><div class="stat">3</div><p class="small">most relevant only</p></div>
+  <div class="card"><p class="small">SMALLEST MEANINGFUL CHANGE</p><div class="stat">1.0</div><p class="small">tiny edits are ignored</p></div>
+</div>
+
+<h2>Add a correction</h2>
+<form class="stack" method="post" action="{{ url_for('feedback_save') }}">
+  <div><label>Company</label><select name="company">{% for n in res %}<option>{{ n }}</option>{% endfor %}</select></div>
+  <div><label>Criterion</label><select name="criterion">{% for side in ['company','founder'] %}{% for c in rub[side] %}<option value="{{ c.id }}">{{ side }}: {{ c.id }}</option>{% endfor %}{% endfor %}</select></div>
+  <div><label>Your score (0 to 10)</label><input name="score" type="number" step="0.5" min="0" max="10" required></div>
+  <div><label>Reason</label><textarea name="reason" rows="2" required></textarea></div>
+  <div><label>Your name</label><input name="author" required></div>
+  <button type="submit">Save correction</button>
+</form>
+
+<h2>Stored corrections</h2>
+<div class="scroll"><table><tr><th>When</th><th>Company</th><th>Criterion</th><th>Tool</th><th>Partner</th><th>Reason</th></tr>
+{% for c in rows %}<tr><td class="small">{{ c.ts }}</td><td>{{ c.company }}</td><td>{{ c.criterion }}</td><td>{{ c.tool_score }}</td><td>{{ c.partner_score }}</td><td>{{ c.reason }}</td></tr>
+{% else %}<tr><td colspan="6" class="small">No corrections yet. Add one above; it is used on later runs for similar companies when it applies.</td></tr>{% endfor %}</table></div>
+
+<h2>Recommendation overrides</h2>
+<p class="small">Changing the call itself is done on each applicant's page. These are kept the same way, with the original output, and shown to the scorer for similar companies. See the <a href="{{ url_for('audit') }}">audit trail</a>: {{ trail|length }} so far.</p>
+<div class="grid">{% for d in dis[-4:] %}<div class="card"><div class="stat">{{ d.rate if d.rate is not none else '-' }}{% if d.rate is not none %}%{% endif %}</div><p class="small">Disagreement, run {{ d.run_id }}<br>{{ d.overrides }} of {{ d.recs }} changed</p></div>{% endfor %}</div>
+
+<h2>How corrections are used</h2>
+<div class="grid">
+<div class="card"><b>What counts</b><p>A real change to the score with a reason. A move under 1.0, or no reason: not stored.</p></div>
+<div class="card"><b>What gets reused</b><p>Same criterion, similar company (picked by meaning from the description and sector). Unrelated companies get nothing.</p></div>
+<div class="card"><b>When two disagree</b><p>The more specific one wins (same sector); if equal, the most recent. The adjustment is capped at +/-2 and shown on the applicant page with the reason.</p></div>
+</div>
+{% endblock %}

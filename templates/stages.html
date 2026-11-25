@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Stages - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><p class="small">STAGES</p><h1>How an applicant <em>moves</em>.</h1>
+<p>Eight stages. Each one says who acts next and what gets an applicant in. Moves only happen when a rule is met or a person acts. Nothing is auto-rejected or auto-advanced.</p></section>
+
+<h2>Funnel</h2>
+<div class="grid">{% for label, n in funnel %}<div class="card"><p class="small">{{ label|upper }}</p><div class="stat">{{ n }}</div></div>{% endfor %}</div>
+
+<h2>Stage definitions</h2>
+<div class="scroll"><table>
+<tr><th>Stage</th><th>Now</th><th>Next action by</th><th>How an applicant gets here</th><th>What happens next</th></tr>
+{% for s in stages %}<tr><td><b>{{ s.label }}</b></td><td>{{ rows|selectattr('stage','equalto',s.id)|list|length }}</td><td>{{ s.who }}</td><td>{{ s.how }}</td><td>{{ s.next }}</td></tr>{% endfor %}
+</table></div>
+
+<h2>Applicants by stage</h2>
+{% for s in stages %}{% set items = rows|selectattr('stage','equalto',s.id)|list %}{% if items %}
+<h3>{{ s.label }}</h3><p class="small">{{ s.next }}</p>
+<p>{% for x in items %}<a class="chip" style="background:#eee;color:#161922" href="{{ url_for('applicant', name=x.r['name']) }}">{{ x.r['name'] }} {{ x.score }} / 10</a>{% endfor %}</p>
+{% endif %}{% endfor %}
+{% endblock %}

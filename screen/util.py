@@ -56,7 +56,16 @@ def now():
 # ---- Neon store ----
 
 TABLES = """
-create table if not exists runs(run_id text primary key, ts text);
+create table if not exists runs(run_id text primary key, ts text, kind text default 'screen', live boolean default true);
+alter table runs add column if not exists kind text default 'screen';
+alter table runs add column if not exists live boolean default true;
+create table if not exists outreach(name text primary key, state text, data jsonb, ts text);
+create table if not exists contacts(company text, founder text, email text, primary key(company, founder));
+create table if not exists handoffs(id serial primary key, ts text, kind text, name text, reason text,
+    attempts integer, status text default 'open', run_id text);
+create table if not exists corrections(id serial primary key, ts text, company text, sector text, summary text,
+    criterion text, tool_score double precision, partner_score double precision, reason text, author text);
+create table if not exists tests(id serial primary key, ts text, kind text, live boolean, data jsonb);
 create table if not exists recs(run_id text, company text, rec text);
 create table if not exists costs(run_id text, applicant text, kind text, model text,
     tok_in integer, tok_out integer, usd double precision, ts text);
@@ -80,13 +89,15 @@ def db(cfg=None):
     if not url:
         raise AllInError("Missing DATABASE_URL. Set it in .env (Neon connection string).")
     try:
-        con = psycopg.connect(url, row_factory=dict_row, autocommit=True, prepare_threshold=None, connect_timeout=15)
+        con = psycopg.connect(url, row_factory=dict_row, autocommit=False, prepare_threshold=None, connect_timeout=15)
     except psycopg.Error as e:
         raise AllInError(f"Cannot reach the Neon database: {e}")
+    # Neon's pooler hands each statement to any backend, so search_path must be set inside the same
+    # transaction as the work. `with db(cfg) as con:` is one transaction: it commits when the block ends.
     schema = os.environ.get("ALLIN_SCHEMA", "") or "public"
     if schema != "public":
         con.execute(f'create schema if not exists "{schema}"')
-    con.execute(f'set search_path to "{schema}"')
+    con.execute(f'set local search_path to "{schema}"')
     if schema not in _ready:
         con.execute(TABLES)
         _ready.add(schema)

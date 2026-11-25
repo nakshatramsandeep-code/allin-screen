@@ -2,17 +2,22 @@
 {% block title %}{{ r['name'] }} - All In Capital Screen{% endblock %}
 {% block body %}
 <section class="hero">
-  <p class="small"><a href="{{ url_for('home') }}">&larr; All applicants</a></p>
+  <p class="small"><a href="{{ url_for('applicants') }}">&larr; All applicants</a></p>
   <h1>{{ r['name'] }} <span class="pill {{ 'low' if r['rec']=='low priority' else r['rec'] }}" style="font-size:16px;vertical-align:middle">{{ r['rec'] }}</span></h1>
   <p>{{ r['profile'].get('one_line') or '' }}</p>
+  <p>{% for t in tags %}<span class="chip">{{ t }}</span>{% endfor %}</p>
 </section>
 
 <div class="grid">
+  <div class="card"><div class="stat">{{ score }} / 10</div><p class="small">Score (company and founder averaged)</p></div>
   <div class="card"><div class="stat">{{ r['company_pct'] }}%</div><p class="small">Company, of full weight</p></div>
   <div class="card"><div class="stat">{{ r['founder_pct'] }}%</div><p class="small">Founder, of full weight</p></div>
   <div class="card"><div class="stat">{{ (r['coverage']*100)|round|int }}%</div><p class="small">Rubric with data</p></div>
   <div class="card"><div class="stat">&#8377;{{ r['cost_inr'] }}</div><p class="small">Cost for this applicant (USD {{ r['cost_usd'] }})</p></div>
 </div>
+<p class="small">Applicant's label: {{ r['profile'].get('sector') or '' }}, {{ r['profile'].get('stage') or '' }}{% if r['profile'].get('raising') %}, raising {{ r['profile'].get('raising') }}{% endif %}.
+ Stage: {{ stage_by_id[o.state if o else ('partner_review' if r['rec']=='flag' else ('take_call' if r['rec']=='advance' else 'recommended_no'))].label }}.
+ <a href="{{ url_for('emails') }}">Outreach</a></p>
 
 <h2>Why</h2>
 <div class="card soft"><ul>{% for x in r['reasons'] %}<li>{{ x }}</li>{% endfor %}</ul>
@@ -35,13 +40,27 @@
 <tr><th>Criterion</th><th>Weight</th><th>Score</th><th>Source</th><th>Quote</th><th>Reason</th></tr>
 {% for g in r[side] %}
 <tr><td><b>{{ g['id'] }}</b></td><td>{{ g['weight'] }}</td>
-<td>{% if g['score'] is none %}<span class="pill low">insufficient data</span>{% else %}{{ g['score'] }}/10{% endif %}</td>
+<td>{% if g['score'] is none %}<span class="pill low">insufficient data</span>{% else %}{{ g['score'] }}/10{% endif %}
+  {% if g.get('adjustment') %}<br><span class="small">tool said {{ g['base_score'] }}. Adjusted {{ '%+g'|format(g['adjustment']['delta']) }} from a partner correction: {{ g['adjustment']['note'] }}</span>{% endif %}</td>
 <td class="small">{{ g['source'] or '' }}</td><td>{% if g['quote'] %}<blockquote>{{ g['quote'] }}</blockquote>{% endif %}</td><td>{{ g['reason'] }}</td></tr>
 {% endfor %}
 </table></div>
 {% endfor %}
 
-<h2>Override this recommendation</h2>
+<h2>Correct a score</h2>
+<p class="small">Keeps the tool's score, yours, the company and criterion, and your reason together. Changes under 1.0 and corrections without a reason are not stored.</p>
+<form class="stack" method="post" action="{{ url_for('feedback_save') }}">
+  <input type="hidden" name="company" value="{{ r['name'] }}">
+  <div><label>Criterion</label><select name="criterion">{% for g in r['company'] + r['founder'] %}{% if g['score'] is not none %}<option value="{{ g['id'] }}">{{ g['id'] }} (tool: {{ g.get('base_score', g['score']) }})</option>{% endif %}{% endfor %}</select></div>
+  <div><label>Your score (0 to 10)</label><input name="score" type="number" step="0.5" min="0" max="10" required></div>
+  <div><label>Reason</label><textarea name="reason" rows="2" required></textarea></div>
+  <div><label>Your name</label><input name="author" required></div>
+  <button type="submit">Save correction</button>
+</form>
+{% if corr %}<div class="scroll"><table><tr><th>When</th><th>Criterion</th><th>Tool</th><th>Partner</th><th>Reason</th></tr>
+{% for c in corr %}<tr><td class="small">{{ c.ts }}</td><td>{{ c.criterion }}</td><td>{{ c.tool_score }}</td><td>{{ c.partner_score }}</td><td>{{ c.reason }}</td></tr>{% endfor %}</table></div>{% endif %}
+
+<h2>Override the recommendation</h2>
 <p class="small">Saves the tool's output, your change and the reason code together. Similar past overrides are shown to the scorer next run.</p>
 <form class="stack" method="post" action="{{ url_for('override', name=r['name']) }}">
   <div><label>New recommendation</label>

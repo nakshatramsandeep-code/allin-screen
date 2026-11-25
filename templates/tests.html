@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Tests - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><p class="small">TESTS</p><h1>Kill criteria and <em>critical tests</em>.</h1>
+<p>Kill criteria are conditions that mean the tool must not be used. Each is checked in code or by the golden set. Every row says whether it ran on a live model or in code only. Results are stored by the command line: <code>python -m screen evals</code>, <code>unittests</code> and <code>history</code>.</p></section>
+
+{% set cases = evals.data.cases if evals else [] %}
+<div class="grid">
+  <div class="card"><p class="small">GOLDEN SET</p><div class="stat">{{ cases|selectattr('pass')|list|length }} / {{ cases|length }}</div><p class="small">{{ 'passed. Last run ' ~ evals.ts if evals else 'not run yet' }}</p></div>
+  <div class="card"><p class="small">UNIT TESTS</p><div class="stat">{% if unit %}{{ unit.data.rows|selectattr('pass')|list|length }} / {{ unit.data.rows|length }}{% else %}-{% endif %}</div><p class="small">{{ 'in code, no model. Last run ' ~ unit.ts if unit else 'not run yet' }}</p></div>
+  <div class="card"><p class="small">HISTORICAL TEST</p><div class="stat">{% if hist %}{{ hist.data.agree }} / {{ hist.data.disagree }} / {{ hist.data.abstain }}{% else %}-{% endif %}</div><p class="small">{{ 'agree / disagree / partner review, live' if hist else 'not run yet' }}</p></div>
+  <div class="card"><p class="small">CHECKER</p><div class="stat" style="font-size:22px">A different Gemini model</div><p class="small">judges the live cases against each assertion</p></div>
+</div>
+
+<h2>Golden set</h2>
+{% if not evals %}<div class="card soft">Not run yet.</div>{% endif %}
+<div class="scroll"><table><tr><th>Case</th><th>Severity</th><th>Input</th><th>Expected</th><th>Assertion</th><th>Result</th><th>Mode</th></tr>
+{% for c in cases %}<tr><td><b>{{ c.id }}</b><br><span class="small">{{ c.kind }}</span></td><td>{{ c.severity }}</td><td class="small">{{ c.input }}</td><td class="small">{{ c.expected }}</td><td>{{ c.assertion }}</td>
+<td>{% if c.pass %}<span class="ok-t">Pass</span>{% else %}<span class="bad-t">Fail</span><br><span class="small">{{ c.notes }}</span>{% endif %}</td>
+<td>{{ 'Live model' if c.live else 'Code only' }}</td></tr>{% endfor %}</table></div>
+
+<h2>Kill criteria</h2>
+<div class="scroll"><table><tr><th>#</th><th>The tool must not be used if...</th><th>Checked by</th></tr>
+<tr><td>K1</td><td>any applicant is auto-rejected or auto-advanced without a partner seeing the outcome. 'Low priority' is only a recommendation; outreach only drafts.</td><td>B1, B2, B5, unit tests: every score pair gives one of three, no reject path, outreach has no send</td></tr>
+<tr><td>K2</td><td>any score appears without a named rubric criterion, or a score without a source and an exact quote.</td><td>Enforced in code (the run fails the output); live golden cases</td></tr>
+<tr><td>K3</td><td>text inside a deck, form or web page changes a score or the call (prompt injection works).</td><td>R1</td></tr>
+<tr><td>K4</td><td>a model call is made after the INR budget is reached, or the kill switch is on.</td><td>Unit tests: budget, kill switch</td></tr>
+<tr><td>K5</td><td>the historical test leaks: a decision, reason or the portfolio list reaches the scorer for the memo under test.</td><td>By construction (only memo facts are passed). Not blind: partner notes discuss some memo companies.</td></tr>
+<tr><td>K6</td><td>missing data is silently filled, or a missing criterion is scored as if evidence existed.</td><td>R2, B3, unit tests</td></tr>
+<tr><td>K7</td><td>data about a same-name, different company reaches the scorer.</td><td>Page check in the scraper (no dedicated test)</td></tr>
+<tr><td>K8</td><td>an email is sent or a real calendar is written, or a failed booking is not handed to a person.</td><td>Unit tests: no send path, retry cap then hand-off</td></tr>
+<tr><td>K9</td><td>a key or database URL is committed or shown in a page.</td><td>Unit test: scan of tracked files</td></tr>
+<tr><td>K10</td><td>a code-only result is presented as live-tested.</td><td>Every row above shows its mode</td></tr>
+<tr><td>K11</td><td>a known portfolio overlap is missed (a call-summary startup versus MeetRecord).</td><td>R5</td></tr>
+<tr><td>K12</td><td>the retry cap is exceeded, or a failed fetch is dropped without a logged hand-off.</td><td>Unit tests</td></tr>
+<tr><td>K13</td><td>the live disagreement rate on the 12 memos is not measured, or is above a ceiling the partners set. <b>The ceiling is not set yet</b>; until it is, the tool is advisory only.</td><td>Historical test below</td></tr></table></div>
+
+<h2>Unit tests</h2>
+<div class="scroll"><table><tr><th>Test</th><th>Result</th></tr>
+{% for r in (unit.data.rows if unit else []) %}<tr><td>{{ r.test }}</td><td>{% if r.pass %}<span class="ok-t">Pass</span>{% else %}<span class="bad-t">Fail</span> <span class="small">{{ r.notes }}</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="2" class="small">Not run yet.</td></tr>{% endfor %}</table></div>
+
+<h2>Historical test on the 12 memos</h2>
+{% if not hist %}<div class="card soft">Not run yet. Run <code>python -m screen history</code>.</div>{% else %}
+<div class="grid">
+  <div class="card"><p class="small">AGREE</p><div class="stat">{{ hist.data.agree }}</div></div>
+  <div class="card"><p class="small">DISAGREE</p><div class="stat">{{ hist.data.disagree }}</div></div>
+  <div class="card"><p class="small">PARTNER REVIEW (ABSTAIN)</p><div class="stat">{{ hist.data.abstain }}</div></div>
+</div>
+<p class="small">Live Gemini scorer, memo facts only, portfolio check off, no corrections. Still not blind: the partner notes behind the rubric discuss some of these companies, and a live model may recognise real companies. Run {{ hist.data.run_id }}, {{ hist.ts }}.</p>
+<div class="scroll"><table><tr><th>Memo</th><th>Fund decision</th><th>Tool call</th><th>Company / founder</th><th>Result</th><th>Why (computed)</th></tr>
+{% for r in hist.data.rows %}<tr><td>{{ r.name }}</td><td>{{ r.decision|capitalize }}</td><td>{{ r.call }}</td><td>{{ r.company_pct }}% / {{ r.founder_pct }}%</td>
+<td>{{ r.result }}</td><td class="small">{% if r.missing %}No data: {{ r.missing|join(', ') }}. {% endif %}{% if r.weak %}Weak: {{ r.weak|join(', ') }}.{% endif %}</td></tr>{% endfor %}</table></div>{% endif %}
+{% endblock %}

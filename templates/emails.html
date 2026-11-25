@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Emails - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><p class="small">EMAILS</p><h1>Founder <em>outreach</em>.</h1>
+<p>The tool drafts; a person reads each draft and sends it from their own mail client, then marks it sent. It never sends or books on its own. Replies are pasted in by a person, read and classified, and ambiguous ones go to a human.</p></section>
+<div class="grid">
+  <div class="card"><p class="small">EMAIL</p><div class="stat" style="font-size:26px">Drafts only</div><p class="small">no email account is connected</p></div>
+  <div class="card"><p class="small">CALENDAR</p><div class="stat" style="font-size:26px">Simulated</div><p class="small">sample busy times, Tue/Thu afternoons, 30 min</p></div>
+  <div class="card"><p class="small">NEEDS A HUMAN</p><div class="stat">{{ n_human }}</div><p class="small">ambiguous reply or failed booking</p></div>
+  <div class="card"><p class="small">BOOKED</p><div class="stat">{{ n_booked }}</div><p class="small">simulated, not on a real calendar</p></div>
+</div>
+
+{% for x in rows %}{% set o = x.outreach %}{% set name = x.r['name'] %}
+{% if o %}
+<div class="card">
+  <h3 style="margin-top:0">{{ name }} <span class="pill {{ 'on' if o.state=='needs_human' else 'advance' }}">{{ stage_by_id[o.state].label }}</span></h3>
+  <p class="small">To: {{ o.to|join(', ') if o.to else 'no founder email on file' }}</p>
+  {% if o.missing_contacts %}<div class="msg err">No email on file for {{ o.missing_contacts|join(', ') }}. Add it below.</div>{% endif %}
+  <p><b>Subject:</b> {{ o.subject }}</p>
+  <pre class="mail">{{ o.body }}</pre>
+  {% if o.reply %}<p><b>Reply ({{ o.reply_class }}):</b></p><blockquote>{{ o.reply }}</blockquote>{% endif %}
+  {% if o.booked %}<p><b>Booked:</b> {{ o.booked.slot }} (simulated, id {{ o.booked.id }})</p>{% endif %}
+  <div class="inline">
+  {% if o.state == 'draft_review' %}
+    <form method="post" action="{{ url_for('email_sent', name=name) }}"><button>I reviewed and sent it</button></form>
+  {% elif o.state == 'awaiting_reply' %}
+    <form class="stack" method="post" action="{{ url_for('email_reply', name=name) }}">
+      <label>Paste the founder's reply</label><textarea name="text" rows="3" required></textarea><button>Read the reply</button></form>
+  {% elif o.state == 'needs_human' %}
+    <p><b>A person decides:</b></p>
+    <form method="post" action="{{ url_for('email_resolve', name=name) }}"><input type="hidden" name="outcome" value="booked"><button class="ghost">Booked by hand</button></form>
+    <form method="post" action="{{ url_for('email_resolve', name=name) }}"><input type="hidden" name="outcome" value="declined"><button class="ghost">Founder declined</button></form>
+    <form method="post" action="{{ url_for('email_resolve', name=name) }}"><input type="hidden" name="outcome" value="awaiting"><button class="ghost">Back to awaiting reply</button></form>
+  {% endif %}
+    <form method="post" action="{{ url_for('email_restart', name=name) }}"><button class="ghost">Start over</button></form>
+  </div>
+  <details><summary>Event log</summary><table><tr><th>When</th><th>Tool</th><th>What happened</th></tr>
+  {% for e in o.events %}<tr><td class="small">{{ e.ts }}</td><td>{{ e.tool }}</td><td>{{ e.note }}</td></tr>{% endfor %}</table></details>
+</div>
+{% endif %}{% endfor %}
+
+<h2>No draft yet</h2>
+{% for x in rows %}{% if not x.outreach %}
+<div class="card"><b>{{ x.r['name'] }}</b>
+  <span class="pill {{ 'low' if x.call=='low priority' else x.call }}">{{ x.call }}</span>
+  <form method="post" action="{{ url_for('email_draft', name=x.r['name']) }}" style="display:inline;margin-left:10px">
+    {% if x.call != 'advance' %}<input type="hidden" name="partner" value="1"><span class="small">Call is {{ x.call }}, so no email is drafted unless a partner asks.</span> <button class="ghost">Draft anyway (partner request)</button>
+    {% else %}<button class="ghost">Draft founder email</button>{% endif %}</form></div>
+{% endif %}{% endfor %}
+
+<h2>Founder emails</h2>
+<p class="small">Needed to address a draft. Stored in the database, not in the repo.</p>
+<form class="stack" method="post" action="{{ url_for('contact') }}">
+  <div><label>Company</label><select name="company">{% for x in rows %}<option>{{ x.r['name'] }}</option>{% endfor %}</select></div>
+  <div><label>Founder (as written in the form)</label><input name="founder" required></div>
+  <div><label>Email</label><input name="email" type="email" required></div><button>Save email</button></form>
+{% for co, m in contacts.items() %}{% for f, e in m.items() %}<p class="small">{{ co }}: {{ f }} &lt;{{ e }}&gt;</p>{% endfor %}{% endfor %}
+
+<h2>What the outreach steps do</h2>
+<div class="scroll"><table><tr><th>Step</th><th>What it does</th><th>Not</th></tr>
+<tr><td>draft_founder_email</td><td>Writes a short email asking for a 30-minute call and any key numbers the screen could not find. Saves a draft.</td><td>Never sends. Only for a 'take the call' applicant, or when a partner asks.</td></tr>
+<tr><td>read_founder_reply</td><td>Classifies the pasted reply as accept, decline or ambiguous. A hedged accept becomes ambiguous.</td><td>Does not guess what a mixed reply means; ambiguous goes to a person.</td></tr>
+<tr><td>check_partner_calendar</td><td>Finds free 30-minute slots on Tuesday and Thursday afternoons (India time). Retried up to {{ 3 }} times, then handed to a person.</td><td>Only after an accept. The calendar here is simulated.</td></tr>
+<tr><td>offer_times, book_meeting</td><td>Records the slots offered and books the first one, marked simulated.</td><td>No real calendar is written.</td></tr>
+<tr><td>update_record</td><td>Writes the new state and a one-line note to the event log.</td><td>Never changes a screening score or call.</td></tr></table></div>
+{% endblock %}

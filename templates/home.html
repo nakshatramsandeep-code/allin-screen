@@ -1,35 +1,38 @@
 {% extends "base.html" %}
 {% block body %}
 <section class="hero">
-  <h1>First pass, <em>all in</em> on the founders.</h1>
-  <p>Every applicant scored against the fund's rubric, with a source for every score. The tool recommends. Partners decide.</p>
+  <p class="small">PIPELINE</p>
+  <h1>Where every applicant <em>stands</em>.</h1>
+  <p>Every applicant read, every score sourced, every decision a partner's. {{ rows|length }} applicants, each in exactly one stage. Stages come from the screening call and the outreach state, never typed in by hand.</p>
 </section>
 
 {% if errs %}<div class="msg err"><b>Failed applicants</b><br>{% for e in errs %}{{ e.name }}: {{ e.error }}<br>{% endfor %}</div>{% endif %}
 
-<h2>Applicants</h2>
-{% if not res %}<div class="card soft">No results yet. Run <code>python -m screen run</code> on the command line.</div>{% endif %}
-<div class="scroll"><table>
-<tr><th>Applicant</th><th>Recommendation</th><th>Company</th><th>Founder</th><th>Data</th><th>Cost</th></tr>
-{% for r in res %}{% set s = sets.get(r['name']) %}
-<tr class="row">
-  <td><a href="{{ url_for('applicant', name=r['name']) }}"><b>{{ r['name'] }}</b></a><br>
-      <span class="small">{{ r['profile'].get('sector') or '' }} &middot; {{ r['profile'].get('stage') or '' }} (applicant's label)</span></td>
-  <td><span class="pill {{ 'low' if r['rec']=='low priority' else r['rec'] }}">{{ r['rec'] }}</span>
-      {% if s %}<br><span class="small">Partner set: <b>{{ s.new_rec }}</b> ({{ s.author }})</span>{% endif %}</td>
-  <td>{{ r['company_pct'] }}%</td><td>{{ r['founder_pct'] }}%</td>
-  <td>{{ (r['coverage']*100)|round|int }}%</td>
-  <td>&#8377;{{ r['cost_inr'] }}</td>
-</tr>{% endfor %}
-</table></div>
-
-<h2>Disagreement over time</h2>
-<p class="small">Share of a run's recommendations that a partner changed.</p>
 <div class="grid">
-{% for d in dis[-6:] %}
-  <div class="card"><div class="stat">{{ d.rate if d.rate is not none else '-' }}{% if d.rate is not none %}%{% endif %}</div>
-  <div class="bar"><i style="width:{{ d.rate or 0 }}%"></i></div>
-  <p class="small">Run {{ d.run_id }}<br>{{ d.overrides }} of {{ d.recs }} changed</p></div>
-{% else %}<div class="card soft">No runs yet.</div>{% endfor %}
+  <div class="card"><p class="small">NEED A PERSON NOW</p><div class="stat">{{ need|length }}</div><p class="small">of {{ rows|length }} applicants</p></div>
+  <div class="card"><p class="small">PARTNER REVIEW</p><div class="stat">{{ cols['partner_review']|length }}</div><p class="small">{{ flagged }} carry at least one flag</p></div>
+  <div class="card"><p class="small">TAKE THE CALL</p><div class="stat">{{ cols['take_call']|length }}</div><p class="small">above the advance cutoff, no flags</p></div>
+  <div class="card"><p class="small">IN OUTREACH</p><div class="stat">{{ in_outreach|length }}</div><p class="small">{{ booked|length }} booked (simulated)</p></div>
+  <div class="card"><p class="small">RECOMMENDED NO</p><div class="stat">{{ cols['recommended_no']|length }}</div><p class="small">a recommendation only</p></div>
+</div>
+
+<div class="tick">NOTHING IS AUTO-REJECTED &nbsp;&middot;&nbsp; PARTNERS SEE EVERY OUTCOME &nbsp;&middot;&nbsp; EVERY SCORE NAMES ITS CRITERION &nbsp;&middot;&nbsp; EVERY CLAIM HAS A SOURCE &nbsp;&middot;&nbsp; MISSING DATA STAYS MISSING &nbsp;&middot;&nbsp; DRAFTS ONLY, NOTHING SENT</div>
+
+{% if not rows %}<div class="card soft">No results yet. Run <code>python -m screen run</code> on the command line.</div>{% endif %}
+<div class="cols">
+{% for s in stages %}{% set items = cols[s.id] %}
+<div class="col">
+  <h3>{{ s.label }} <span class="num">{{ items|length }}</span></h3>
+  <p class="small">Next: {{ s.who }}. {{ s.next }}</p>
+  {% for x in items %}
+  <div class="mini">
+    <a href="{{ url_for('applicant', name=x.r['name']) }}"><b>{{ x.r['name'] }}</b></a> <span class="num">{{ x.score }} / 10</span><br>
+    <span class="small">{{ x.r['profile'].get('one_line') or '' }}</span><br>
+    <span class="num">{{ (x.r['profile'].get('sector') or '')|upper }} &middot; {{ (x.r['profile'].get('stage') or '')|upper }}</span><br>
+    {% for t in x.flags %}<span class="chip">{{ t }}</span>{% endfor %}
+  </div>
+  {% else %}<p class="small">No one in this stage.</p>{% endfor %}
+</div>
+{% endfor %}
 </div>
 {% endblock %}

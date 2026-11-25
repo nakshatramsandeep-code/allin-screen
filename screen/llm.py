@@ -32,6 +32,7 @@ def call(cfg, role, system, user, run_id, applicant, kind, want_json=True):
     last = None
     for attempt in range(3):
         guard.check(cfg)
+        cost.check_budget(cfg)
         try:
             text, tin, tout = _gemini(cfg, model, system, user, want_json)
             cost.log(cfg, run_id, applicant, kind, model, tin, tout)

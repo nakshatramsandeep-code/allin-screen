@@ -21,6 +21,8 @@ gate:                       # recommendation cutoffs, as % of full weight. Not g
   weak: 45
   min_coverage: 0.6         # share of total weight with data; below this -> flag
 
+critical: [traction, unit_economics]   # no data on these means a partner looks, whatever the score
+
 checks:                     # not scored. A miss sends the case to a partner.
   allowed_sectors: [fintech, deeptech, consumer tech, consumer brands]   # site, notes meeting 2
   stage: pre-seed or seed, first cheque about USD 250K to 500K (site FAQ)

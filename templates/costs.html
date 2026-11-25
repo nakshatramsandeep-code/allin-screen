@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Costs - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><p class="small">COSTS</p><h1>Cost per run and <em>expenses</em>.</h1>
+<p>Model spend in INR, per run and per application. The ledger records every call with its tokens. Calls stop at the budget and a partner is told (see Retries).</p></section>
+<div class="grid">
+  <div class="card"><p class="small">BUDGET</p><div class="stat">&#8377;{{ c.budget }}</div><p class="small">{{ c.used_pct }}% used</p><div class="bar"><i style="width:{{ [c.used_pct,100]|min }}%"></i></div></div>
+  <div class="card"><p class="small">SPENT</p><div class="stat">&#8377;{{ '%.2f'|format(c.spent) }}</div><p class="small">{{ c.calls }} live calls</p></div>
+  <div class="card"><p class="small">REMAINING</p><div class="stat">&#8377;{{ '%.2f'|format(c.remaining) }}</div><p class="small">before calls stop</p></div>
+  <div class="card"><p class="small">AVG PER APPLICATION</p><div class="stat">&#8377;{{ '%.3f'|format(c.per_app) }}</div><p class="small">all calls divided by applicants</p></div>
+  <div class="card"><p class="small">TOKENS</p><div class="stat" style="font-size:26px">{{ '{:,}'.format(c.tok_in + c.tok_out) }}</div><p class="small">{{ '{:,}'.format(c.tok_in) }} in &middot; {{ '{:,}'.format(c.tok_out) }} out</p></div>
+</div>
+<p class="small">USD to INR {{ c.fx.usd_inr }}: {{ c.fx.source }}, as of {{ c.fx.as_of }}. Refreshed deliberately with <code>python -m screen fx-refresh</code>, not per applicant.</p>
+
+<h2>Cost per run</h2>
+<div class="scroll"><table><tr><th>Run</th><th>Kind</th><th>Applications</th><th>Live calls</th><th>Cost</th><th>Per application</th></tr>
+{% for r in c.runs %}<tr><td>{{ r.run_id }}<br><span class="small">{{ r.rts or '' }}</span></td><td>{{ r.kind }}</td><td>{{ r.apps }}</td><td>{{ r.calls }}</td><td>&#8377;{{ '%.4f'|format(r.inr) }}</td><td>&#8377;{{ '%.4f'|format(r.inr / r.apps) }}</td></tr>
+{% else %}<tr><td colspan="6" class="small">No spend yet.</td></tr>{% endfor %}</table></div>
+
+<h2>Cost per application</h2>
+<div class="scroll"><table><tr><th>Applicant</th><th>Calls</th><th>Tokens in / out</th><th>Cost</th></tr>
+{% for a in c.apps %}<tr><td>{{ a.applicant }}</td><td>{{ a.calls }}</td><td>{{ '{:,}'.format(a.ti) }} / {{ '{:,}'.format(a.tout) }}</td><td>&#8377;{{ '%.4f'|format(a.inr) }}</td></tr>{% endfor %}</table></div>
+
+<h2>Expenses breakdown</h2>
+<div class="grid">
+<div class="card"><b>By model</b>{% for m in c.models %}<p style="margin:6px 0">{{ m.model }}: {{ m.calls }} calls, &#8377;{{ '%.4f'|format(m.inr) }}</p>{% endfor %}</div>
+<div class="card"><b>By step</b>{% for m in c.steps %}<p style="margin:6px 0">{{ m.kind }}: {{ m.calls }} calls, &#8377;{{ '%.4f'|format(m.inr) }}</p>{% endfor %}</div>
+<div class="card"><b>By day</b>{% for m in c.days %}<p style="margin:6px 0">{{ m.day }}: &#8377;{{ '%.4f'|format(m.inr) }}</p>{% endfor %}</div>
+</div>
+{% endblock %}
