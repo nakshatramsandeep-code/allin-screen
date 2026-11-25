@@ -12,7 +12,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from . import guard, llm
-from .util import cache_get, cache_put, db, now, slug
+from .util import add_handoff, cache_get, cache_put, now, slug
 
 UA = {"User-Agent": "Mozilla/5.0 (research client; respects blocks)"}
 FETCHES = {"count": 0}          # counted so tests can prove the cache works
@@ -214,15 +214,6 @@ def _verify(cfg, name, prof, rec, run_id):
         if not rec["items"]:
             rec["status"] = "no_relevant_results"
     return rec
-
-
-def add_handoff(cfg, kind, name, reason, attempts, run_id=None):
-    with db(cfg) as con:
-        if con.execute("select 1 from handoffs where kind=%s and name=%s and status='open' and reason=%s",
-                       (kind, name, reason)).fetchone():
-            return
-        con.execute("insert into handoffs(ts,kind,name,reason,attempts,status,run_id) values(%s,%s,%s,%s,%s,'open',%s)",
-                    (now(), kind, name, reason, attempts, run_id))
 
 
 def gather(cfg, name, prof, refresh=False, run_id="manual"):

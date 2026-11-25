@@ -165,3 +165,12 @@ def latest_errors(cfg):
         return con.execute("select e.name, e.error, e.run_id from errors e where not exists "
                            "(select 1 from results r where r.name=e.name and r.ts > e.ts) "
                            "order by e.ts desc").fetchall()
+
+
+def add_handoff(cfg, kind, name, reason, attempts, run_id=None):
+    with db(cfg) as con:
+        if con.execute("select 1 from handoffs where kind=%s and name=%s and status='open' and reason=%s",
+                       (kind, name, reason)).fetchone():
+            return
+        con.execute("insert into handoffs(ts,kind,name,reason,attempts,status,run_id) values(%s,%s,%s,%s,%s,'open',%s)",
+                    (now(), kind, name, reason, attempts, run_id))

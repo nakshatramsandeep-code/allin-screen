@@ -4,8 +4,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from . import guard, llm
-from .scrape import add_handoff
-from .util import AllInError, _json, db, latest_result, now
+from .util import AllInError, _json, add_handoff, db, latest_result, now
 
 IST = timezone(timedelta(hours=5, minutes=30))
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
