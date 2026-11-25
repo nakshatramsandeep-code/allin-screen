@@ -1,0 +1,154 @@
+# All In Capital screening rubric. Partners: edit weights, text and thresholds here.
+# Each criterion is scored 0-10 by the tool. Points = weight x score / 10.
+# A criterion with no data is logged "insufficient data" and earns 0 points,
+# so missing data lowers the total (partner notes, meeting 1). Coverage is shown beside it.
+# Sources: deal memos = "MESA_T2_Case 03_Deal Memos.pdf"; notes = "MESA_T2_Case 03_Partner Meeting Notes.pdf";
+# site = allincapital.vc/apply_now and /portfolio (read 2026-11-25).
+
+version: 1
+
+rules:
+  - Score the evidence, not the pedigree. Credentials are not a business. (notes, meeting 3)
+  - Score founder quality and path to market separately. Never mix them. (notes, meeting 3)
+  - A missing number is never skipped: it is logged "insufficient data" and earns zero points. (notes, meeting 1)
+  - A founder getting defensive on a weak spot is information. Record it if shown. (notes, meeting 1)
+  - Nobody is auto-rejected or auto-advanced. A partner sees every result. (notes, meeting 5)
+
+gate:                       # recommendation cutoffs, as % of full weight. Not given by partners: see open points.
+  advance_min: 60           # both company and founder at or above this -> advance
+  low_max: 40               # both below this -> low priority
+  strong: 65                # one side at or above this while the other is below "weak" -> flag
+  weak: 45
+  min_coverage: 0.6         # share of total weight with data; below this -> flag
+
+checks:                     # not scored. A miss sends the case to a partner.
+  allowed_sectors: [fintech, deeptech, consumer tech, consumer brands]   # site, notes meeting 2
+  stage: pre-seed or seed, first cheque about USD 250K to 500K (site FAQ)
+  portfolio_overlap: default is no; allowed only if both founders know (notes, meeting 4)
+
+company:
+  - id: sector_stage_fit
+    weight: 10
+    ask: Is the sector one of fintech, deeptech, consumer tech, consumer brands, and is the stage pre-seed or seed?
+    high: Clear fit on both.
+    low: Outside the sectors or a later stage.
+    sources: [site, deal memos 10 (Coinlane), notes meeting 2]
+  - id: customer_pain
+    weight: 10
+    ask: Is there a concrete customer pain, shown by customer contact or live use?
+    high: Named pain, seen at real customer sites (Unbox, Wint Wealth).
+    low: Pain assumed, not observed.
+    sources: [deal memos 3, 5]
+  - id: traction
+    weight: 25
+    ask: Is there real use, with repeat behaviour, pilots in live sites, or paying customers?
+    high: Repeat shown with numbers (Giva).
+    low: Downloads or growth with no repeat or retention data (Petalry, Prepnest).
+    sources: [deal memos 2, 7, 12]
+  - id: unit_economics
+    weight: 15
+    ask: Are CAC, margin or contribution margin shown, and is it healthy?
+    high: Cohort or channel numbers, positive contribution.
+    low: No numbers, growth bought with paid channels, negative contribution (HopBox).
+    sources: [deal memos 2, 4, 7, notes meeting 1]
+  - id: customer_path
+    weight: 10
+    ask: Is it clear who pays and how the first customers are reached?
+    high: Signed or paying customers, a repeatable channel.
+    low: No named customer (AeroDrop).
+    sources: [deal memos 8]
+  - id: regulatory_liability
+    weight: 10
+    ask: Is the regulatory and liability path clear, with a milestone sequence?
+    high: Founders can name the regulator steps and who bears liability (ePlane).
+    low: 'Said "solved once the tech works" (AeroDrop), or a plan that depends on a friendlier rule (Coinlane).'
+    sources: [deal memos 1, 8, 10, notes meeting 3]
+  - id: defensibility
+    weight: 10
+    ask: What stops a larger player copying it?
+    high: Field execution, data or distribution that is hard to copy (SuperK).
+    low: Product is one person or an easily copied format (Prepnest).
+    sources: [deal memos 9, 12]
+  - id: capital_fit
+    weight: 10
+    ask: Does the model work with a pre-seed or seed cheque, or does it need density or a large raise first?
+    high: Works at small scale, or a narrow niche with positive contribution.
+    low: Only works with far more capital (HopBox).
+    sources: [deal memos 4, notes meeting 1]
+
+founder:
+  - id: field_immersion
+    weight: 25
+    ask: Did the founders spend time with the customer before building at scale?
+    high: Dozens of store visits, manual early service, registered users first (SuperK, Wint Wealth, Jai Kisan).
+    low: Built from an assumption.
+    sources: [deal memos 5, 9, 11]
+  - id: owns_the_risk
+    weight: 20
+    ask: Do the founders treat the hardest business risk (credit, regulation, retention) as theirs?
+    high: Names the risk and a plan to own it (Jai Kisan).
+    low: Hands it to a partner or says it is solved later (CampusCredit, AeroDrop). See open point 3.
+    sources: [deal memos 6, 8, 11, notes meeting 2]
+  - id: data_fluency
+    weight: 20
+    ask: Do the founders know their own numbers (repeat, CAC, margin, defaults)?
+    high: Gives cohort and channel numbers unprompted (Giva).
+    low: Gives averages or none (Petalry).
+    sources: [deal memos 2, 7]
+  - id: team_balance
+    weight: 15
+    ask: Is the team complete and committed, with gaps covered?
+    high: Complementary pair, full-time (ePlane, Unbox, SuperK).
+    low: Solo with no one covering operations, or part-time.
+    sources: [deal memos 1, 2, 3, 9]
+  - id: relevant_record
+    weight: 10
+    ask: Is the founders' past work relevant, judged by what they did, not where they studied?
+    high: Direct experience in the problem.
+    low: No experience in the core risk (CampusCredit).
+    sources: [deal memos 6, 4, notes meeting 3]
+  - id: candor
+    weight: 10
+    ask: Does the material show candour about failures and weak spots?
+    high: Failures described before being asked (Unbox).
+    low: Defensive on key questions (Prepnest).
+    sources: [deal memos 3, 12, notes meeting 1]
+    note: A deck or form rarely shows this. Expect "insufficient data" until a call.
+
+open_points:
+  - id: 1
+    issue: Written thesis (four sectors) versus what the fund actually backs. Riya says recent yeses would score lower on the public wording; Aditya says the pipeline changed. Nobody reconciled it.
+    sources: [notes meeting 5, site]
+    tool_behaviour: Scores against the written thesis. Anything outside the four sectors, or a later stage, is flagged to a partner, never marked down to low priority.
+  - id: 2
+    issue: Rural and farm credit is fintech by label. It was approved on condition of a credit-risk hire plan, and Aditya doubts it.
+    sources: [notes meeting 2, deal memos 11]
+    tool_behaviour: Lending businesses are flagged with this condition stated.
+  - id: 3
+    issue: The "founder owns the risk" test decided CampusCredit and Jai Kisan, but Kushal said not to write it down because founders learn to pass written rules.
+    sources: [notes meeting 2, deal memos 6, 11]
+    tool_behaviour: The criterion is kept (owns_the_risk) and marked disputed. Partners decide whether it stays in the file.
+  - id: 4
+    issue: Missing data counts as zero points (Kushal) while the brief says log "insufficient data" and do not guess. Both are applied, but nobody has said how low coverage should be treated.
+    sources: [notes meeting 1]
+    tool_behaviour: Missing data scores zero points and is shown as insufficient data. Coverage under the gate minimum goes to a partner.
+  - id: 5
+    issue: Cutoffs for advance, flag and low priority were never given by the partners. The gate values above are the tool's starting guess.
+    sources: [gate section]
+    tool_behaviour: Used as written. Edit them above.
+  - id: 6
+    issue: Fund I memos show early-round cheques while the site says pre-seed and seed. The stage rule is unclear for applicants in between.
+    sources: [deal memos 1, 3, 5, 7, 9, 11, site]
+    tool_behaviour: Series A or later is flagged to a partner. Early round is not flagged.
+  - id: 7
+    issue: Portfolio overlap. Default is no, but the fund sometimes invests in competitors if both founders know. How close a business must be to count as overlap is not defined.
+    sources: [notes meeting 4]
+    tool_behaviour: Possible or likely overlap goes to a partner with the next step "speak to the portfolio founder first".
+  - id: 8
+    issue: Who runs the second call. Aditya does it himself for deeptech; Kushal is fine with Riya screening fintech and consumer.
+    sources: [notes meeting 3]
+    tool_behaviour: Deeptech call drafts name Aditya as a required attendee.
+  - id: 9
+    issue: The sector is chosen by the applicant on the form and may not match the business (for example, a B2B restocking app with credit chosen as consumer tech).
+    sources: [seed forms]
+    tool_behaviour: The tool scores sector fit on the business described, and shows the applicant's own label in the report.

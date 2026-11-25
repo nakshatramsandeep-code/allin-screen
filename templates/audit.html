@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Audit trail - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><h1>Every <em>override</em>, on the record.</h1>
+<p>Who changed what, why, and which run it came from. The tool's original output is kept with each one.</p></section>
+<div class="scroll"><table><tr><th>When</th><th>Who</th><th>Applicant</th><th>Run</th><th>Tool said</th><th>Partner set</th><th>Code</th><th>Reason</th></tr>
+{% for t in trail %}<tr><td class="small">{{ t.ts }}</td><td>{{ t.author }}</td><td>{{ t.company }}</td><td class="small">{{ t.run_id }}</td>
+<td>{{ t.old_rec }}</td><td><b>{{ t.new_rec }}</b></td><td>{{ t.reason_code }}</td><td>{{ t.reason }}</td></tr>
+{% else %}<tr><td colspan="8" class="small">No overrides yet.</td></tr>{% endfor %}</table></div>
+<h2>Disagreement by run</h2>
+<div class="scroll"><table><tr><th>Run</th><th>Recommendations</th><th>Overrides</th><th>Disagreement</th></tr>
+{% for d in dis %}<tr><td>{{ d.run_id }}</td><td>{{ d.recs }}</td><td>{{ d.overrides }}</td><td>{{ d.rate if d.rate is not none else '-' }}{% if d.rate is not none %}%{% endif %}</td></tr>
+{% else %}<tr><td colspan="4" class="small">No runs yet.</td></tr>{% endfor %}</table></div>
+{% endblock %}

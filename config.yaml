@@ -1,0 +1,65 @@
+# Settings. Model names and prices live here, not in code.
+models:
+  scorer: gemini-3.6-flash         # stronger model: scoring only
+  cheap: gemini-3.5-flash-lite     # cheap model: profile, overlap, override match
+  checker: gemini-3.8-flash        # a different Gemini model checks the golden set
+keys:                              # env var that holds the key
+  gemini: GEMINI_API_KEY
+
+# USD per million tokens. Source: ai.google.dev/gemini-api/docs/pricing, read 2026-11-25.
+# gemini-3.8-flash and gemini-3.6-flash: intro price through 2026-12-31; from 2027-01-01 it is in 1.50, out 7.50.
+# Gemini output price includes thinking tokens.
+prices_usd_per_mtok:
+  gemini-3.8-flash: {in: 0.75, out: 3.75}
+  gemini-3.5-flash-lite: {in: 0.30, out: 2.50}
+  gemini-3.6-flash: {in: 0.75, out: 3.75}
+
+paths:
+  seed: data/seed
+  rubric: rubric/rubric.yaml
+  fx: fx.yaml
+  out: out
+
+scrape:
+  timeout_s: 15
+  retries: 3
+  backoff_s: 1.5
+  max_items: 3          # items kept per source
+  max_chars: 1500       # chars kept per item
+
+fund:
+  site: https://www.allincapital.vc
+  portfolio_url: https://www.allincapital.vc/portfolio
+  thesis_url: https://www.allincapital.vc/apply_now
+  # Press says Fund I alone backed 51 startups; the site says 100+ teams.
+  # If the page lists fewer, the list is flagged as incomplete.
+  expected_min: 51
+  expected_source: https://inc42.com/buzz/all-in-capital-launches-inr-200-cr-fund-ii
+  # Starting floor from the deal memos. Not the full portfolio.
+  seed_floor:
+    - {name: ePlane, desc: "Electric vertical take-off aircraft and drones for short-range intracity travel."}
+    - {name: Unbox Robotics, desc: "AI-assisted robotic package-sorting systems for warehouses and fulfilment centres."}
+    - {name: Wint Wealth, desc: "Platform that makes bond-market products accessible to retail investors in India."}
+    - {name: Giva, desc: "Online-first silver, gold and lab-grown diamond jewellery brand."}
+    - {name: SuperK, desc: "Tech-enabled grocery retail network that rebrands neighbourhood stores in small towns."}
+    - {name: Jai Kisan, desc: "Financing for farmers and rural households to buy agri and dairy equipment."}
+    - {name: MeetRecord, desc: "Captures intelligence from online sales and customer-success meetings: call summaries, coaching."}
+
+reason_codes:
+  - missing_data      # tool scored or skipped something it should not have
+  - founder_misread   # founder score wrong
+  - company_misread   # company score wrong
+  - thesis_fit        # sector or stage view differs
+  - portfolio_overlap # conflict call differs
+  - market_context    # outside knowledge changes the view
+  - other
+
+workflow:
+  partner_to: ""        # required for the drafts command; set to the partner address
+  call_days: [Tuesday, Thursday]
+  call_time: "15:00"    # IST, 30 minutes (partner notes, meeting 5)
+  call_minutes: 30
+  min_days_ahead: 2
+  deeptech_extra: Aditya
+
+fx_max_age_days: 30

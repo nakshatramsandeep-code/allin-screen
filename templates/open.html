@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Open points - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero"><h1>What is still <em>undecided</em>.</h1>
+<p>Where the fund's own sources disagree, the tool does not pick a side quietly. These are for the partners.</p></section>
+{% for o in rub['open_points'] %}
+<div class="card"><b>{{ o.id }}. {{ o.issue }}</b>
+<p class="small">Sources: {{ o.sources|join(', ') }}</p><p><b>Tool does:</b> {{ o.tool_behaviour }}</p></div>
+{% endfor %}
+<h2>Gate cutoffs (starting guess)</h2>
+<div class="card soft">{% for k, v in gate.items() %}<b>{{ k }}</b>: {{ v }} &nbsp; {% endfor %}</div>
+<h2>Rubric weights</h2>
+<div class="grid">
+{% for side in ['company','founder'] %}<div class="card"><h3 style="margin-top:0">{{ side|capitalize }}</h3>
+{% for c in rub[side] %}<p style="margin:6px 0"><b>{{ c.weight }}</b> {{ c.id }}</p>{% endfor %}</div>{% endfor %}
+</div>
+{% endblock %}

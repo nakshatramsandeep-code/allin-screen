@@ -1,0 +1,4 @@
+-r requirements.txt
+pymupdf==2.1
+google-genai==3.6.1
+beautifulsoup4==4.15.0

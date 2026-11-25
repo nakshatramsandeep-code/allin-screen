@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}All In Capital Screen{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#C62F2B;--ink:#161922;--orange:#FF6E29;--yellow:#FFBC3F;--line:#e4e4e4;--soft:#f6f6f6;--mute:#666}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.55 Inter,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:#fff}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+header.top{border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:5}
+header.top .wrap{display:flex;align-items:center;gap:28px;height:68px}
+.logo{font-weight:700;font-size:20px;letter-spacing:-.02em;text-decoration:none}
+.logo b{color:var(--red)}
+nav{display:flex;gap:22px;flex:1}
+nav a{text-decoration:none;font-weight:500;font-size:15px}
+nav a:hover{color:var(--red)}
+.killbox form{display:inline}
+.pill{display:inline-block;border-radius:999px;padding:4px 14px;font-size:13px;font-weight:600;white-space:nowrap}
+.pill.advance{background:var(--ink);color:#fff}
+.pill.flag{background:var(--orange);color:#fff}
+.pill.low{background:#e9e9e9;color:#444}
+.pill.on{background:var(--red);color:#fff}
+.pill.off{background:#e9e9e9;color:#444}
+button,.btn{font:inherit;font-weight:600;border:0;border-radius:999px;padding:10px 22px;background:var(--ink);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+button.red,.btn.red{background:var(--red)}
+button.ghost{background:#fff;color:var(--ink);border:1px solid var(--ink);padding:6px 16px;font-size:13px}
+.hero{padding:64px 0 32px}
+.hero h1{font-size:clamp(34px,5.4vw,64px);line-height:1.04;letter-spacing:-.035em;margin:0 0 16px;font-weight:700}
+.hero h1 em{font-style:normal;color:var(--red)}
+.hero p{max-width:640px;color:var(--mute);font-size:18px;margin:0}
+h2{font-size:26px;letter-spacing:-.02em;margin:48px 0 14px}
+h3{font-size:18px;margin:28px 0 8px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:600;padding:10px 12px;border-bottom:2px solid var(--ink)}
+td{padding:14px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.row:hover{background:var(--soft)}
+.small{font-size:13px;color:var(--mute)}
+.card{border:1px solid var(--line);border-radius:20px;padding:22px 24px;margin:14px 0;background:#fff}
+.card.soft{background:var(--soft);border-color:var(--soft)}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.stat{font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.bar{height:8px;border-radius:8px;background:#ececec;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--red)}
+.msg{border-radius:14px;padding:12px 18px;margin:16px 0;font-weight:500}
+.msg.ok{background:#e9f6ee}.msg.err{background:#fde9e8;color:#8a1c19}
+.banner{background:var(--red);color:#fff;text-align:center;padding:10px;font-weight:600}
+form.stack{display:grid;gap:12px;max-width:640px}
+input,select,textarea{font:inherit;padding:10px 14px;border:1px solid #cfcfcf;border-radius:12px;width:100%}
+label{font-size:13px;font-weight:600}
+details{margin:10px 0}summary{cursor:pointer;font-weight:600}
+blockquote{margin:0;padding-left:12px;border-left:3px solid var(--yellow);color:#333}
+footer{margin:80px 0 40px;color:var(--mute);font-size:13px;border-top:1px solid var(--line);padding-top:20px}
+.scroll{overflow-x:auto}
+@media(max-width:700px){nav{gap:14px}.killbox{display:none}}
+</style>
+</head>
+<body>
+{% if kill %}<div class="banner">KILL SWITCH ON. All runs are stopped.</div>{% endif %}
+<header class="top"><div class="wrap">
+  <a class="logo" href="{{ url_for('home') }}">All <b>In</b> Capital <span class="small">Screen</span></a>
+  <nav>
+    <a href="{{ url_for('home') }}">Applicants</a>
+    <a href="{{ url_for('audit') }}">Audit trail</a>
+    <a href="{{ url_for('open_points') }}">Open points</a>
+  </nav>
+  <div class="killbox">
+    <form method="post" action="{{ url_for('kill') }}">
+      <span class="pill {{ 'on' if kill else 'off' }}">Kill switch {{ 'ON' if kill else 'off' }}</span>
+      <input type="hidden" name="state" value="{{ 'off' if kill else 'on' }}">
+      <button class="ghost" type="submit">{{ 'Turn off' if kill else 'Turn on' }}</button>
+    </form>
+  </div>
+</div></header>
+<main class="wrap">
+{% with m = get_flashed_messages(with_categories=true) %}{% for cat, text in m %}<div class="msg {{ cat }}">{{ text }}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+</main>
+<footer class="wrap">The tool recommends. Partners decide. Nothing is rejected automatically.</footer>
+</body>
+</html>

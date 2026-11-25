@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="hero"><h1>Something <em>stopped</em>.</h1><p>The app does not carry on quietly. Here is what went wrong:</p></section>
+<div class="msg err">{{ msg }}</div>
+<a class="btn" href="{{ url_for('home') }}">Back</a>
+{% endblock %}

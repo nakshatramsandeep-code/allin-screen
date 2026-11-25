@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ r['name'] }} - All In Capital Screen{% endblock %}
+{% block body %}
+<section class="hero">
+  <p class="small"><a href="{{ url_for('home') }}">&larr; All applicants</a></p>
+  <h1>{{ r['name'] }} <span class="pill {{ 'low' if r['rec']=='low priority' else r['rec'] }}" style="font-size:16px;vertical-align:middle">{{ r['rec'] }}</span></h1>
+  <p>{{ r['profile'].get('one_line') or '' }}</p>
+</section>
+
+<div class="grid">
+  <div class="card"><div class="stat">{{ r['company_pct'] }}%</div><p class="small">Company, of full weight</p></div>
+  <div class="card"><div class="stat">{{ r['founder_pct'] }}%</div><p class="small">Founder, of full weight</p></div>
+  <div class="card"><div class="stat">{{ (r['coverage']*100)|round|int }}%</div><p class="small">Rubric with data</p></div>
+  <div class="card"><div class="stat">&#8377;{{ r['cost_inr'] }}</div><p class="small">Cost for this applicant (USD {{ r['cost_usd'] }})</p></div>
+</div>
+
+<h2>Why</h2>
+<div class="card soft"><ul>{% for x in r['reasons'] %}<li>{{ x }}</li>{% endfor %}</ul>
+<p><b>Next action:</b> {{ r['next_action'] }}</p></div>
+
+{% if r['data_flags'] or r['portfolio']['flags'] %}
+<h3>Missing-data flags</h3>
+<div class="card"><ul>{% for x in r['data_flags'] + r['portfolio']['flags'] %}<li>{{ x }}</li>{% endfor %}</ul>
+<p class="small">Portfolio list from {{ r['portfolio']['source'] }}, read {{ r['portfolio']['fetched'] }}.</p></div>
+{% endif %}
+
+{% if r['injection_attempts'] %}
+<h3>Text aimed at the scorer (ignored)</h3>
+<div class="card">{% for x in r['injection_attempts'] %}<blockquote>{{ x }}</blockquote>{% endfor %}</div>
+{% endif %}
+
+{% for side in ['company','founder'] %}
+<h2>{{ side|capitalize }} scores</h2>
+<div class="scroll"><table>
+<tr><th>Criterion</th><th>Weight</th><th>Score</th><th>Source</th><th>Quote</th><th>Reason</th></tr>
+{% for g in r[side] %}
+<tr><td><b>{{ g['id'] }}</b></td><td>{{ g['weight'] }}</td>
+<td>{% if g['score'] is none %}<span class="pill low">insufficient data</span>{% else %}{{ g['score'] }}/10{% endif %}</td>
+<td class="small">{{ g['source'] or '' }}</td><td>{% if g['quote'] %}<blockquote>{{ g['quote'] }}</blockquote>{% endif %}</td><td>{{ g['reason'] }}</td></tr>
+{% endfor %}
+</table></div>
+{% endfor %}
+
+<h2>Override this recommendation</h2>
+<p class="small">Saves the tool's output, your change and the reason code together. Similar past overrides are shown to the scorer next run.</p>
+<form class="stack" method="post" action="{{ url_for('override', name=r['name']) }}">
+  <div><label>New recommendation</label>
+  <select name="to">{% for x in REC %}{% if x != r['rec'] %}<option>{{ x }}</option>{% endif %}{% endfor %}</select></div>
+  <div><label>Reason code</label><select name="code">{% for c in codes %}<option>{{ c }}</option>{% endfor %}</select></div>
+  <div><label>Reason (one line, reusable for similar companies)</label><textarea name="reason" rows="3" required></textarea></div>
+  <div><label>Your name</label><input name="author" required></div>
+  <button class="red" type="submit">Save override</button>
+</form>
+
+<h3>Audit trail for {{ r['name'] }}</h3>
+<div class="scroll"><table><tr><th>When</th><th>Who</th><th>From</th><th>To</th><th>Code</th><th>Reason</th></tr>
+{% for t in trail %}<tr><td class="small">{{ t.ts }}</td><td>{{ t.author }}</td><td>{{ t.old_rec }}</td><td>{{ t.new_rec }}</td><td>{{ t.reason_code }}</td><td>{{ t.reason }}</td></tr>
+{% else %}<tr><td colspan="6" class="small">No overrides yet.</td></tr>{% endfor %}</table></div>
+<p class="small">Run {{ r['run_id'] }} &middot; {{ r['ts'] }}</p>
+{% endblock %}
