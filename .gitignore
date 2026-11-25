@@ -3,3 +3,6 @@
 out/
 __pycache__/
 data/seed/
+
+.vercel
+.env*

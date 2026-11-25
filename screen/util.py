@@ -83,10 +83,10 @@ def db(cfg=None):
         con = psycopg.connect(url, row_factory=dict_row, autocommit=True, prepare_threshold=None, connect_timeout=15)
     except psycopg.Error as e:
         raise AllInError(f"Cannot reach the Neon database: {e}")
-    schema = os.environ.get("ALLIN_SCHEMA", "")
-    if schema:
+    schema = os.environ.get("ALLIN_SCHEMA", "") or "public"
+    if schema != "public":
         con.execute(f'create schema if not exists "{schema}"')
-        con.execute(f'set search_path to "{schema}"')
+    con.execute(f'set search_path to "{schema}"')
     if schema not in _ready:
         con.execute(TABLES)
         _ready.add(schema)
